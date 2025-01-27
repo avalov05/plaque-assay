@@ -4,6 +4,7 @@ import './LandingPage.css';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader';
 import wells from '../assets/wells.STL';
 
+
 function LandingPage() {
 
   useEffect(() => {
@@ -33,16 +34,15 @@ function LandingPage() {
       (geometry) => {
         const glassMaterial = new THREE.MeshPhysicalMaterial({
           color: new THREE.Color(0xffffff), // Light blue tint for the glass
-          // metalness: 0.1,
+          metalness: 0.1,
           // roughness: 0.5,
           transparent: true,
           opacity: 0.7,  // Slight transparency for glass
-          refractionRatio: 0.98, // Simulate glass refraction
-          // clearcoat: 1.0,
-          // clearcoatRoughness: 0.0,
-          metalness: 0.0,
+          // refractionRatio: 0.98, // Simulate glass refraction
+          clearcoat: 1.0,
+          clearcoatRoughness: 0.0,
           roughness: 0.0,
-          transmission: 1,
+          transmission: 2,
           ior: 1.5,
         });
 
