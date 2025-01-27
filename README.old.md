@@ -1,1 +1,0 @@
-# plaque-assay
