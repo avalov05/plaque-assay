@@ -2,20 +2,27 @@ import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import './LandingPage.css';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader';
+import logo from '../assets/mol_logo_black_512.png'; // Adjust path as needed
+import '../components/fonts/square.ttf';
+import '../components/fonts/inter.otf';
+import background from '../assets/gradient.jpg';
 
 import wells from '../assets/wells2.stl';
 
+// Add these constants before the STL loader
+const PHASE_DURATION = 600; // Duration for each animation phase
+
 function LandingPage() {
   const [materialProps, setMaterialProps] = React.useState({
-    roughness: 0.3,          // Keep completely smooth
+    roughness: 0.0,          // Keep completely smooth
     transparent: true,
-    opacity: 0.2,            // Reduced for more transparency in flat areas
-    metalness: 0.0,          // Keep non-metallic
-    transmission: 0.95,      // Slightly reduced to allow for more visible edges
+    opacity: 0.7,            // Reduced for more transparency in flat areas
+    metalness: 0.3,          // Keep non-metallic
+    transmission: 0.99,      // Slightly reduced to allow for more visible edges
     thickness: 2.0,          // Increased significantly to enhance edge effects
     ior: 1.52,              // Adjusted to match real glass more closely
     clearcoat: 1.0,         // Increased for stronger edge highlights
-    clearcoatRoughness: 0.1, // Slight roughness for more natural look
+    clearcoatRoughness: 0.9, // Slight roughness for more natural look
     attenuationDistance: 0.5,// Reduced dramatically for stronger edge effects
     attenuationColor: 0xffffff,  // Slight blue tint for more realistic glass
     envMapIntensity: 2.5     // Increased for stronger environmental reflections
@@ -30,24 +37,31 @@ function LandingPage() {
 
     const scene = new THREE.Scene();
     
-    // Replace the image texture with video texture
-    // const video = document.createElement('video');
-    // video.src = videoB; // Update this path to your video
-    // video.loop = true;
-    // video.muted = true;
-    // video.playsInline = true;
-    // video.play();
-
-    // const videoTexture = new THREE.VideoTexture(video);
-    // videoTexture.minFilter = THREE.LinearFilter;
-    // videoTexture.magFilter = THREE.LinearFilter;
-    // videoTexture.format = THREE.RGBFormat;
-    
-    // scene.background = videoTexture;
+    // Add background texture
+    const textureLoader = new THREE.TextureLoader();
+    const backgroundTexture = textureLoader.load(background);
+    scene.background = backgroundTexture;
 
     const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
     camera.position.set(3, 3, 3);
-    camera.lookAt(0, -0.3, -1);
+    camera.lookAt(0, 0, 0);
+
+    // Enhance lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 20); // Increased intensity
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5); // Increased intensity
+    directionalLight.position.set(5, 5, 5);
+    scene.add(directionalLight);
+
+    // Add point lights for better visibility
+    const pointLight1 = new THREE.PointLight(0xffffff, 5);
+    pointLight1.position.set(5, -5, 5);
+    scene.add(pointLight1);
+
+    const pointLight2 = new THREE.PointLight(0xffffff, 5);
+    pointLight2.position.set(-5, 5, -5);
+    scene.add(pointLight2);
 
     const renderer = new THREE.WebGLRenderer({ 
       antialias: true,
@@ -72,13 +86,6 @@ function LandingPage() {
     //   }
     // );
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 20);
-    scene.add(ambientLight);
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 10);
-    directionalLight.position.set(5, 5, 5);
-    scene.add(directionalLight);
-
     const Eloader = new THREE.TextureLoader();
     const envMap = Eloader.load('../assets/dusk2.png');
     envMap.mapping = THREE.EquirectangularReflectionMapping;
@@ -87,6 +94,32 @@ function LandingPage() {
     loader.load(
       wells,
       (geometry) => {
+        let activeParticles = [];
+
+        // Helper function to create a droplet with varied purple colors
+        function createDroplet(position, size, distance) {
+          const geometry = new THREE.SphereGeometry(size, 8, 8);
+          
+          // Color varies based on distance from source
+          const hue = 0.75 + (Math.random() * 0.1 - 0.05); // Base purple
+          const saturation = 0.7 - (distance * 0.2); // Fade saturation with distance
+          const lightness = 0.4 + (distance * 0.1); // Lighten with distance
+          const color = new THREE.Color().setHSL(hue, saturation, lightness);
+          
+          const material = new THREE.MeshPhysicalMaterial({
+            color: color,
+            transparent: true,
+            opacity: 1 - (distance * 0.3), // More transparent with distance
+            metalness: 0.1,
+            roughness: 0.2,
+            emissive: color.multiplyScalar(0.2),
+          });
+          
+          const droplet = new THREE.Mesh(geometry, material);
+          droplet.position.set(position.x, position.y, position.z);
+          return droplet;
+        }
+
         // Create a canvas for the patchy texture
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -249,12 +282,11 @@ function LandingPage() {
           plate.add(bottomMesh);
         }
 
-        // Position the plate
-        plate.position.set(1, -2, -5);
+        // Position and add the plate to the scene
+        plate.position.set(12, 0, 0);  // Moved further right to center in right two-thirds
         scene.add(plate);
-
-        // Create water droplet material
-        const dropletMaterial = new THREE.MeshPhysicalMaterial({
+         // Create water droplet material
+         const dropletMaterial = new THREE.MeshPhysicalMaterial({
           color: 0xffffff,
           metalness: 0.0,
           roughness: 0.0,
@@ -295,57 +327,156 @@ function LandingPage() {
           wellCenters.push({ x, y, z });
         }
         
-        // Modify droplet creation with even larger sizes
+        // Modify droplet creation around wells
         wellCenters.forEach(center => {
-          const numDroplets = Math.floor(Math.random() * 15) + 40; // 40-55 droplets per well
+          const numDroplets = Math.floor(Math.random() * 8) + 12; // Reduced from 40-55 to 12-20 droplets per well
           
           for (let i = 0; i < numDroplets; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const radius = wellRadius + 1.0 + Math.random() * 8.0;
+            const radius = wellRadius + 1.0 + Math.random() * 6.0; // Reduced spread from 8.0 to 6.0
             const x = center.x + Math.cos(angle) * radius;
             const z = center.z + Math.sin(angle) * radius;
             
             const y = minY + totalHeight * (0.2 + Math.random() * 0.6);
-            const scale = 0.6 + Math.random() * 1.4; // Increased from 0.4-1.6 to 0.6-2.0
+            const scale = 0.8 + Math.random() * 1.2; // Slightly larger droplets to compensate for fewer number
             
             const droplet = createDroplet({ x, y, z }, scale);
             plate.add(droplet);
           }
         });
 
-        // Add fewer but larger condensation droplets
-        for (let i = 0; i < 400; i++) {
+        // Reduce condensation droplets
+        for (let i = 0; i < 150; i++) { // Reduced from 400 to 150
           const angle = Math.random() * Math.PI * 2;
-          const radius = 3.0 + Math.random() * 10.0;
+          const radius = 3.0 + Math.random() * 8.0; // Reduced from 10.0 to 8.0
           const x = Math.cos(angle) * radius;
           const z = Math.sin(angle) * radius;
           const y = minY + totalHeight * (0.15 + Math.random() * 0.7);
           
-          const scale = 0.45 + Math.random() * 0.6; // Increased from 0.3-0.8 to 0.45-1.05
+          const scale = 0.6 + Math.random() * 0.6; // Slightly larger average size
           
           const droplet = createDroplet({ x, y, z }, scale);
           plate.add(droplet);
         }
 
-        // Add random larger droplets in wide area
-        for (let i = 0; i < 200; i++) {
-          const x = (Math.random() - 0.5) * 28;
-          const z = (Math.random() - 0.5) * 20;
+        // Reduce random larger droplets
+        for (let i = 0; i < 80; i++) { // Reduced from 200 to 80
+          const x = (Math.random() - 0.5) * 24; // Reduced spread from 28 to 24
+          const z = (Math.random() - 0.5) * 16; // Reduced spread from 20 to 16
           const y = minY + totalHeight * (0.2 + Math.random() * 0.6);
           
-          const scale = 0.5 + Math.random() * 0.8; // Increased from 0.35-0.95 to 0.5-1.3
+          const scale = 0.7 + Math.random() * 0.8; // Slightly larger to maintain visual impact
           
           const droplet = createDroplet({ x, y, z }, scale);
           plate.add(droplet);
         }
 
-        // Modify the animate function to include rotation
+        // In the STL loader callback, after creating the plate and water droplets
+        const waterDroplets = addWaterDroplets();
+        waterDroplets.position.x = 12;  // Match plate position
+        scene.add(waterDroplets);
+
+        let time = 0;
+        let phaseTime = 0;
+
+        // Add these state variables at the start of the animation
+        let prevCameraPos = new THREE.Vector3(27, 8, 0);  // Adjusted starting position
+        let prevLookAtPos = new THREE.Vector3(12, 0, 0);  // Look at the plate's new center
+        let targetCameraPos = new THREE.Vector3();
+        let targetLookAtPos = new THREE.Vector3();
+
         const animate = () => {
           requestAnimationFrame(animate);
-          plate.rotation.y += 0.005;
-          plate.rotation.x += 0.005;
+          time += 0.002;
+          phaseTime++;
+
+          // Reset phases after complete cycle
+          if (phaseTime >= PHASE_DURATION * 4) {
+            phaseTime = 0;
+          }
+
+          // Animate water droplets
+          waterDroplets.children.forEach((droplet) => {
+            droplet.position.y = droplet.userData.initialY + 
+              Math.sin(time * droplet.userData.floatSpeed + droplet.userData.floatOffset) * 0.1;
+            
+            droplet.rotation.x += 0.001;
+            droplet.rotation.y += 0.001;
+          });
+
+          const cycleDuration = Math.PI * 2;
+          const cycleProgress = (time % cycleDuration) / cycleDuration;
+
+          const easeInOutQuint = t => t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2;
+
+          // Calculate target positions based on current phase
+          if (cycleProgress < 0.33) {  // First third: Fly low across the plate
+            const t = cycleProgress * 3;
+            const easeT = easeInOutQuint(t);
+            
+            targetCameraPos.set(
+              27 - easeT * 12,  // Start further right
+              8 - easeT * 6,
+              -8 * easeT
+            );
+            
+            targetLookAtPos.set(
+              12,  // Always look at plate's new center
+              -2 * easeT,
+              0
+            );
+          } 
+          else if (cycleProgress < 0.67) {
+            const t = (cycleProgress - 0.33) * 3;
+            const easeT = easeInOutQuint(t);
+            
+            const angle = easeT * Math.PI;
+            const radius = 3;
+            
+            targetCameraPos.set(
+              12 + radius * Math.cos(angle),  // Orbit around new center
+              2,
+              radius * Math.sin(angle)
+            );
+            
+            targetLookAtPos.set(
+              12,  // Look at plate's new center
+              -2,
+              0
+            );
+          }
+          else {
+            const t = (cycleProgress - 0.67) * 3;
+            const easeT = easeInOutQuint(t);
+            
+            const angle = Math.PI + (easeT * Math.PI);
+            const radius = 3 + (easeT * 12);
+            
+            targetCameraPos.set(
+              12 + radius * Math.cos(angle),  // Spiral around new center
+              2 + (easeT * 6),
+              radius * Math.sin(angle)
+            );
+            
+            targetLookAtPos.set(
+              12,  // Look at plate's new center
+              -2 + (easeT * 2),
+              0
+            );
+          }
+
+          // Smoothly interpolate between current and target positions
+          const lerpFactor = 0.02; // Adjust this value to control smoothness (lower = smoother)
+          
+          prevCameraPos.lerp(targetCameraPos, lerpFactor);
+          prevLookAtPos.lerp(targetLookAtPos, lerpFactor);
+
+          camera.position.copy(prevCameraPos);
+          camera.lookAt(prevLookAtPos);
+
           renderer.render(scene, camera);
         };
+
         animate();
       },
       (xhr) => {
@@ -376,13 +507,66 @@ function LandingPage() {
     };
   }, []);
 
+  const addWaterDroplets = () => {
+    const droplets = new THREE.Group();
+    const numDroplets = 20;  // Reduced from 40 to 20
+    
+    const waterMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      metalness: 0.0,
+      roughness: 0.0,
+      transmission: 1.0,
+      thickness: 0.5,
+      transparent: true,
+      opacity: 0.3,
+      envMapIntensity: 0.8,
+      ior: 1.33,
+      clearcoat: 0.5,
+      clearcoatRoughness: 0.0
+    });
+
+    // Create droplets with better spacing
+    for (let i = 0; i < numDroplets; i++) {
+      const angle = (i / numDroplets) * Math.PI * 2 + Math.random() * 0.5; // More even angular distribution
+      const radius = 2.5 + Math.random() * 1.5; // Slightly tighter radius range
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      const y = 0.2 + Math.random() * 1.0; // Lower height range
+      
+      // Slightly larger size range to compensate for fewer droplets
+      const size = 0.02 + Math.random() * 0.03;
+      const dropletGeometry = new THREE.SphereGeometry(size, 12, 12); // Reduced segments
+      const droplet = new THREE.Mesh(dropletGeometry, waterMaterial);
+      
+      droplet.position.set(x, y, z);
+      droplet.rotation.set(
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI
+      );
+      
+      droplet.userData.initialY = y;
+      droplet.userData.floatSpeed = 0.2 + Math.random() * 0.3; // Slightly slower animation
+      droplet.userData.floatOffset = Math.random() * Math.PI * 2;
+      
+      droplets.add(droplet);
+    }
+    
+    return droplets;
+  };
+
   return (
-    <div>
+    <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
       <div className="title" id="title">
         <h1>Plaque Assays</h1>
         <h1>Made Easy</h1>
       </div>
       <div className="canvas-container" id="canvas-container">
+        <img 
+          src={logo} 
+          alt="Logo" 
+          className="logo"
+        />
       </div>
     </div>
   );
