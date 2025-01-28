@@ -60,7 +60,7 @@ function LandingPage() {
     // HDR environment setup
     // const rgbeLoader = new RGBELoader();
     // rgbeLoader.load(
-    //   '../assets/dusk2.hdr', // Put your HDR environment map in your public folder
+    //   '../assets/dusk2.png', // Put your HDR environment map in your public folder
     //   function(texture) {
     //     texture.mapping = THREE.EquirectangularReflectionMapping;
     //     scene.background = texture;
