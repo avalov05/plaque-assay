@@ -1,49 +1,41 @@
-.landing-container {
-  display: flex;
-  min-height: 100vh;
+.canvas-container {
   width: 100%;
+  height: 100%;
+  position: relative;
 }
 
-.content-left {
-  width: 50%;
-  height: 100vh;
+.background-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+}
+
+.three-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+.title {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 33.33vw;  /* One third of the viewport width */
+  height: 100vh;   /* Full viewport height */
+  background: rgba(255, 255, 255, 0.1);  /* Slight white overlay */
+  backdrop-filter: blur(10px);  /* Creates the blur effect */
+  -webkit-backdrop-filter: blur(10px);  /* For Safari support */
+  z-index: 2;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
-  text-align: center;
+  padding: 0 30px;  /* Add some padding for the text */
 }
 
-.model-container {
-  position: absolute;
-  right: 0;
-  top: 0;
-  width: 50%;
-  height: 100%;
-  background-color: transparent;
-}
-
-.model-container canvas {
-  width: 100% !important;
-  height: 100% !important;
-  outline: none;
-  background: white !important;
-}
-
-.main-title {
-  font-size: 4rem;
-  margin-bottom: 2rem;
-  line-height: 1.2;
-  width: 100%;
-}
-
-.get-started-btn {
-  padding: 1rem 2rem;
-  border-radius: 30px;
-  background: #007bff;
-  color: white;
-  border: none;
-  cursor: pointer;
-  font-size: 1.2rem;
-  align-self: center;
+.title h1 {
+  margin: 0;  /* Remove default margins */
+  color: rgb(0, 0, 0);  /* Ensure text is visible */
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);  /* Optional: adds some depth to the text */
 }
